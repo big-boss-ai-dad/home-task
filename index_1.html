@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>家事分担 — Household Balance</title>
+  <meta name="description" content="家事の分担を可視化・調整できるシンプルなツール。" />
+  <meta property="og:title" content="家事分担 — Household Balance" />
+  <meta property="og:description" content="家事の分担を可視化・調整できるシンプルなツール。" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%96%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --cream: #F4EBDC;
+      --paper: #FAF4E8;
+      --ink: #1F1A17;
+      --line: #D9C9B0;
+      --wife: #C26B5C;
+      --husband: #2F4858;
+      --serif: 'Shippori Mincho', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+      --sans: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      background: radial-gradient(ellipse at top, var(--paper) 0%, var(--cream) 100%);
+      background-attachment: fixed;
+      font-family: var(--sans);
+      color: var(--ink);
+      min-height: 100vh;
+      -webkit-text-size-adjust: 100%;
+    }
+    body { padding: 2rem 1rem; }
+    @media (min-width: 640px) { body { padding: 3rem 2rem; } }
+
+    .container { max-width: 640px; margin: 0 auto; }
+
+    .header { text-align: center; margin-bottom: 2.5rem; }
+    .header-divider { height: 1px; width: 3rem; background: var(--ink); margin: 0 auto 0.75rem; }
+    .header-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.3em; opacity: 0.6; margin: 0 0 0.5rem; }
+    .header-title { font-family: var(--serif); font-weight: 700; font-size: 2rem; letter-spacing: 0.05em; margin: 0; }
+    @media (min-width: 640px) { .header-title { font-size: 2.25rem; } }
+    .header-subtitle { font-family: var(--serif); font-size: 0.75rem; opacity: 0.55; margin: 0.5rem 0 0; }
+
+    .card { background: var(--paper); border: 1px solid var(--line); padding: 1.25rem; border-radius: 2px; }
+    @media (min-width: 640px) { .summary.card { padding: 1.5rem; } }
+
+    .summary { margin-bottom: 2rem; }
+    .summary-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; font-size: 0.625rem; letter-spacing: 0.25em; text-transform: uppercase; opacity: 0.55; }
+    .summary-totals { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
+    .total-group { display: flex; align-items: baseline; gap: 0.5rem; }
+    .total-num { font-family: var(--serif); font-size: 1.5rem; font-weight: 700; line-height: 1; }
+    .total-num.wife { color: var(--wife); }
+    .total-num.husband { color: var(--husband); }
+    .total-label { font-size: 0.75rem; opacity: 0.55; }
+    .summary-bar { height: 12px; width: 100%; background: var(--line); border-radius: 999px; overflow: hidden; display: flex; }
+    .summary-bar .fill-wife { background: var(--wife); transition: width 0.5s ease; }
+    .summary-bar .fill-husband { background: var(--husband); transition: width 0.5s ease; }
+    .summary-pcts { display: flex; justify-content: space-between; margin-top: 0.375rem; font-size: 0.625rem; opacity: 0.55; }
+    .summary-balance { border-top: 1px solid var(--line); padding-top: 1rem; margin-top: 1.25rem; text-align: center; }
+    .balance-text { font-family: var(--serif); font-size: 1.125rem; font-weight: 500; margin: 0; }
+    .balance-sub { font-size: 0.75rem; opacity: 0.6; margin: 0.125rem 0 0; }
+
+    .tasks { display: flex; flex-direction: column; gap: 0.75rem; }
+    .task-header { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .task-name-btn { font-family: var(--serif); font-size: 1rem; font-weight: 500; background: none; border: none; cursor: pointer; padding: 0.25rem 0; color: var(--ink); text-align: left; }
+    .task-name-edit { flex: 1; font-family: var(--serif); font-size: 1rem; font-weight: 500; background: transparent; border: none; border-bottom: 1px solid var(--ink); padding: 0.25rem 0.25rem; color: var(--ink); outline: none; width: 100%; }
+    .icon-btn { background: none; border: none; cursor: pointer; padding: 0.375rem; border-radius: 999px; color: var(--ink); opacity: 0.4; transition: background 0.2s, opacity 0.2s; display: inline-flex; align-items: center; justify-content: center; }
+    .icon-btn:hover { background: rgba(0,0,0,0.05); opacity: 1; }
+
+    .task-bar { height: 28px; width: 100%; background: var(--line); border-radius: 2px; overflow: hidden; display: flex; margin-bottom: 0.5rem; }
+    .task-bar .fill-wife { background: var(--wife); display: flex; align-items: center; justify-content: flex-start; padding-left: 0.5rem; transition: width 0.3s ease; min-width: 0; }
+    .task-bar .fill-husband { background: var(--husband); display: flex; align-items: center; justify-content: flex-end; padding-right: 0.5rem; transition: width 0.3s ease; min-width: 0; }
+    .task-bar .num { font-size: 0.75rem; font-weight: 600; color: var(--paper); font-variant-numeric: tabular-nums; }
+
+    .slider-row { display: flex; align-items: center; gap: 0.75rem; }
+    .slider-label { font-size: 0.625rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; }
+    .slider-label.wife { color: var(--wife); }
+    .slider-label.husband { color: var(--husband); }
+
+    .slider { flex: 1; -webkit-appearance: none; appearance: none; height: 4px; background: var(--line); border-radius: 999px; outline: none; cursor: pointer; }
+    .slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    .slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--ink); cursor: pointer; border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+
+    .actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+    .btn { font-family: var(--serif); font-weight: 500; letter-spacing: 0.05em; font-size: 0.875rem; padding: 0.875rem 1.25rem; border-radius: 2px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: opacity 0.2s, background 0.2s; }
+    .btn-primary { flex: 1; background: var(--ink); color: var(--paper); }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-secondary { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
+    .btn-secondary:hover { background: rgba(0,0,0,0.05); }
+
+    .footer-hint { text-align: center; margin-top: 2rem; font-size: 0.7rem; font-family: var(--serif); opacity: 0.45; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-divider"></div>
+      <p class="header-label">Household Balance</p>
+      <h1 class="header-title">家事分担</h1>
+      <p class="header-subtitle">妻 と おれ の バランス</p>
+    </header>
+
+    <div id="summary" class="summary card"></div>
+    <div id="tasks" class="tasks"></div>
+
+    <div class="actions">
+      <button id="add-btn" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        タスクを追加
+      </button>
+      <button id="reset-btn" class="btn btn-secondary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+        リセット
+      </button>
+    </div>
+
+    <p class="footer-hint">タスク名をタップして編集 · スライダーで分担を調整<br>変更は自動保存されます</p>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var STORAGE_KEY = 'household-balance-v1';
+      var DEFAULT_TASKS = [
+        { id: 1, name: '仕事',   wife: 0 },
+        { id: 2, name: '料理',   wife: 9 },
+        { id: 3, name: '洗い物', wife: 2 },
+        { id: 4, name: '洗濯',   wife: 10 },
+        { id: 5, name: '掃除',   wife: 3 },
+        { id: 6, name: '育児',   wife: 6 }
+      ];
+
+      var ICON_X = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+
+      var state = {
+        tasks: loadTasks(),
+        editingId: null
+      };
+
+      function loadTasks() {
+        try {
+          var saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            var parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          }
+        } catch (e) {}
+        return DEFAULT_TASKS.map(function (t) { return { id: t.id, name: t.name, wife: t.wife }; });
+      }
+
+      function saveTasks() {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks)); } catch (e) {}
+      }
+
+      function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = String(text == null ? '' : text);
+        return div.innerHTML;
+      }
+
+      function computed() {
+        var wifeTotal = 0, husbandTotal = 0;
+        for (var i = 0; i < state.tasks.length; i++) {
+          wifeTotal += state.tasks[i].wife;
+          husbandTotal += (10 - state.tasks[i].wife);
+        }
+        var total = wifeTotal + husbandTotal;
+        var wifePct = total > 0 ? (wifeTotal / total) * 100 : 50;
+        return {
+          wifeTotal: wifeTotal,
+          husbandTotal: husbandTotal,
+          total: total,
+          wifePct: wifePct,
+          husbandPct: 100 - wifePct,
+          diff: wifeTotal - husbandTotal
+        };
+      }
+
+      function balanceMessage(c) {
+        if (c.total === 0) return { text: '—', sub: 'タスクを追加してください' };
+        if (Math.abs(c.diff) <= 2) return { text: 'ほぼ均衡', sub: '良いバランスです' };
+        if (c.diff > 0) return { text: '妻に偏重', sub: 'おれより ' + Math.abs(c.diff) + ' ポイント多い' };
+        return { text: 'おれに偏重', sub: '妻より ' + Math.abs(c.diff) + ' ポイント多い' };
+      }
+
+      function renderSummary() {
+        var c = computed();
+        var b = balanceMessage(c);
+        document.getElementById('summary').innerHTML =
+          '<div class="summary-meta">' +
+            '<span>合計バランス</span>' +
+            '<span>' + c.total + ' / ' + (state.tasks.length * 10) + ' pt</span>' +
+          '</div>' +
+          '<div class="summary-totals">' +
+            '<div class="total-group">' +
+              '<span class="total-num wife">' + c.wifeTotal + '</span>' +
+              '<span class="total-label">妻</span>' +
+            '</div>' +
+            '<div class="total-group">' +
+              '<span class="total-label">おれ</span>' +
+              '<span class="total-num husband">' + c.husbandTotal + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="summary-bar">' +
+            '<div class="fill-wife" style="width:' + c.wifePct + '%"></div>' +
+            '<div class="fill-husband" style="width:' + c.husbandPct + '%"></div>' +
+          '</div>' +
+          '<div class="summary-pcts">' +
+            '<span>' + c.wifePct.toFixed(0) + '%</span>' +
+            '<span>' + c.husbandPct.toFixed(0) + '%</span>' +
+          '</div>' +
+          '<div class="summary-balance">' +
+            '<p class="balance-text">' + escapeHtml(b.text) + '</p>' +
+            '<p class="balance-sub">' + escapeHtml(b.sub) + '</p>' +
+          '</div>';
+      }
+
+      function renderTasks() {
+        var html = '';
+        for (var i = 0; i < state.tasks.length; i++) {
+          var task = state.tasks[i];
+          var husband = 10 - task.wife;
+          var wp = task.wife * 10;
+          var isEditing = state.editingId === task.id;
+
+          var headerHtml = isEditing
+            ? '<input type="text" class="task-name-edit" value="' + escapeHtml(task.name) + '" data-id="' + task.id + '" maxlength="20" />' +
+              '<button class="icon-btn" data-action="delete" data-id="' + task.id + '" aria-label="削除">' + ICON_X + '</button>'
+            : '<button class="task-name-btn" data-action="edit" data-id="' + task.id + '">' + escapeHtml(task.name) + '</button>' +
+              '<button class="icon-btn" data-action="delete" data-id="' + task.id + '" aria-label="削除">' + ICON_X + '</button>';
+
+          html +=
+            '<div class="task card" data-id="' + task.id + '">' +
+              '<div class="task-header">' + headerHtml + '</div>' +
+              '<div class="task-bar">' +
+                '<div class="fill-wife" style="width:' + wp + '%">' +
+                  (task.wife > 0 ? '<span class="num">' + task.wife + '</span>' : '') +
+                '</div>' +
+                '<div class="fill-husband" style="width:' + (100 - wp) + '%">' +
+                  (husband > 0 ? '<span class="num">' + husband + '</span>' : '') +
+                '</div>' +
+              '</div>' +
+              '<div class="slider-row">' +
+                '<span class="slider-label wife">妻</span>' +
+                '<input type="range" min="0" max="10" value="' + task.wife + '" class="slider" data-id="' + task.id + '" />' +
+                '<span class="slider-label husband">おれ</span>' +
+              '</div>' +
+            '</div>';
+        }
+        document.getElementById('tasks').innerHTML = html;
+
+        if (state.editingId !== null) {
+          var input = document.querySelector('.task-name-edit[data-id="' + state.editingId + '"]');
+          if (input) { input.focus(); input.select(); }
+        }
+      }
+
+      function updateTaskBar(id) {
+        var task = findTask(id);
+        if (!task) return;
+        var taskEl = document.querySelector('.task[data-id="' + id + '"]');
+        if (!taskEl) return;
+        var husband = 10 - task.wife;
+        var wp = task.wife * 10;
+        var fillWife = taskEl.querySelector('.task-bar .fill-wife');
+        var fillHusband = taskEl.querySelector('.task-bar .fill-husband');
+        fillWife.style.width = wp + '%';
+        fillHusband.style.width = (100 - wp) + '%';
+        fillWife.innerHTML = task.wife > 0 ? '<span class="num">' + task.wife + '</span>' : '';
+        fillHusband.innerHTML = husband > 0 ? '<span class="num">' + husband + '</span>' : '';
+      }
+
+      function findTask(id) {
+        for (var i = 0; i < state.tasks.length; i++) {
+          if (state.tasks[i].id === id) return state.tasks[i];
+        }
+        return null;
+      }
+
+      function render() {
+        renderSummary();
+        renderTasks();
+      }
+
+      function commitEdit(id, value) {
+        var task = findTask(id);
+        var trimmed = (value || '').trim();
+        if (task && trimmed) task.name = trimmed;
+        state.editingId = null;
+        saveTasks();
+        render();
+      }
+
+      document.addEventListener('click', function (e) {
+        var target = e.target.closest && e.target.closest('[data-action]');
+        if (!target) return;
+        var action = target.dataset.action;
+        var id = parseInt(target.dataset.id, 10);
+        if (isNaN(id)) return;
+
+        if (action === 'edit') {
+          state.editingId = id;
+          render();
+        } else if (action === 'delete') {
+          state.tasks = state.tasks.filter(function (t) { return t.id !== id; });
+          if (state.editingId === id) state.editingId = null;
+          saveTasks();
+          render();
+        }
+      });
+
+      document.addEventListener('input', function (e) {
+        if (e.target.classList && e.target.classList.contains('slider')) {
+          var id = parseInt(e.target.dataset.id, 10);
+          var task = findTask(id);
+          if (task) {
+            task.wife = parseInt(e.target.value, 10);
+            updateTaskBar(id);
+            renderSummary();
+            saveTasks();
+          }
+        }
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.target.classList && e.target.classList.contains('task-name-edit')) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            commitEdit(parseInt(e.target.dataset.id, 10), e.target.value);
+          } else if (e.key === 'Escape') {
+            state.editingId = null;
+            render();
+          }
+        }
+      });
+
+      document.addEventListener('focusout', function (e) {
+        if (e.target.classList && e.target.classList.contains('task-name-edit')) {
+          var id = parseInt(e.target.dataset.id, 10);
+          setTimeout(function () {
+            if (state.editingId === id) commitEdit(id, e.target.value);
+          }, 0);
+        }
+      });
+
+      document.getElementById('add-btn').addEventListener('click', function () {
+        var maxId = 0;
+        for (var i = 0; i < state.tasks.length; i++) {
+          if (state.tasks[i].id > maxId) maxId = state.tasks[i].id;
+        }
+        state.tasks.push({ id: maxId + 1, name: '新しいタスク', wife: 5 });
+        state.editingId = maxId + 1;
+        saveTasks();
+        render();
+      });
+
+      document.getElementById('reset-btn').addEventListener('click', function () {
+        if (confirm('初期値に戻します。よろしいですか？')) {
+          state.tasks = DEFAULT_TASKS.map(function (t) { return { id: t.id, name: t.name, wife: t.wife }; });
+          state.editingId = null;
+          saveTasks();
+          render();
+        }
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
